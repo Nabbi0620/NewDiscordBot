@@ -1,14 +1,39 @@
-const sqlite3 = require("sqlite3").verbose();
+const fs = require("fs");
 
-const db = new sqlite3.Database("./levels.db");
+const file = "./levels.json";
 
-db.run(`
-CREATE TABLE IF NOT EXISTS levels (
-    id TEXT PRIMARY KEY,
-    name TEXT,
-    count INTEGER DEFAULT 0,
-    level INTEGER DEFAULT 0
-)
-`);
+if(!fs.existsSync(file)){
+    fs.writeFileSync(file, "{}");
+}
 
-module.exports = db;
+let levels = JSON.parse(
+    fs.readFileSync(file, "utf8")
+);
+
+
+function save(){
+    fs.writeFileSync(
+        file,
+        JSON.stringify(levels,null,2)
+    );
+}
+
+
+module.exports = {
+
+    get(id){
+        return levels[id];
+    },
+
+
+    set(id,data){
+        levels[id]=data;
+        save();
+    },
+
+
+    all(){
+        return Object.values(levels);
+    }
+
+};

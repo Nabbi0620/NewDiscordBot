@@ -1,4 +1,4 @@
-const db = require("./database");
+const database = require("./database");
 require("dotenv").config();
 
 const {
@@ -103,7 +103,7 @@ const commands = [
         .setRequired(true)
     )
 
-].map(command=>command.toJSON());
+].map(command => command.toJSON());
 
 
 
@@ -120,6 +120,7 @@ const rest = new REST({
 
         console.log("명령어 등록 중...");
 
+
         await rest.put(
             Routes.applicationGuildCommands(
                 CLIENT_ID,
@@ -129,6 +130,7 @@ const rest = new REST({
                 body:commands
             }
         );
+
 
         console.log("명령어 등록 완료!");
 
@@ -165,70 +167,50 @@ client.on("messageCreate", message=>{
     const name = message.author.username;
 
 
-    db.get(
-        "SELECT * FROM levels WHERE id=?",
-        [id],
-        (err,row)=>{
+    let user = database.get(id);
 
 
-            if(!row){
+    if(!user){
 
-                db.run(
-                    "INSERT INTO levels VALUES (?,?,?,?)",
-                    [
-                        id,
-                        name,
-                        1,
-                        0
-                    ]
-                );
+        user = {
+            name:name,
+            count:0,
+            level:0
+        };
 
-            }
-
-            else{
+    }
 
 
-                const count = row.count + 1;
-                const level = Math.floor(count / 100);
+    user.count++;
+
+    const oldLevel = user.level;
+
+    user.level =
+    Math.floor(user.count / 100);
 
 
-                db.run(
-                    `
-                    UPDATE levels
-                    SET name=?, count=?, level=?
-                    WHERE id=?
-                    `,
-                    [
-                        name,
-                        count,
-                        level,
-                        id
-                    ]
-                );
+    database.set(id,user);
 
 
-                if(level > row.level){
 
-                    message.channel.send(
+    if(user.level > oldLevel){
+
+        message.channel.send(
 `╔═════════════════╗
 🎉 레벨 업!
 👤 ${name}
-⭐ Lv.${level}
+⭐ Lv.${user.level}
 ╚═════════════════╝`
-                    );
+        );
 
-                }
-
-            }
-
-        }
-    );
+    }
 
 });
 
 // 명령어 처리
 
 client.on("interactionCreate", async interaction=>{
+
 
     if(!interaction.isChatInputCommand())
         return;
@@ -243,9 +225,10 @@ client.on("interactionCreate", async interaction=>{
     if(interaction.commandName==="핑"){
 
         await interaction.editReply(
-            `🏓 퐁!\n`+
-            `🤖 봇 상태: 정상 작동\n`+
-            `📡 서버 핑: ${client.ws.ping}ms`
+`🏓 퐁!
+
+🤖 봇 상태: 정상 작동
+📡 서버 핑: ${client.ws.ping}ms`
         );
 
     }
@@ -256,30 +239,40 @@ client.on("interactionCreate", async interaction=>{
 
     if(interaction.commandName==="dm"){
 
+
         const user =
         interaction.options.getUser("유저");
+
 
         const content =
         interaction.options.getString("내용");
 
 
+
         try{
 
+
             await user.send(content);
+
 
             await interaction.editReply(
                 "✅ DM 전송 완료!"
             );
 
-        }catch{
+
+        }catch(error){
+
 
             await interaction.editReply(
                 "❌ DM 전송 실패"
             );
 
+
         }
 
+
     }
+
 
 
 
@@ -287,15 +280,20 @@ client.on("interactionCreate", async interaction=>{
 
     if(interaction.commandName==="주사위"){
 
+
         const dice =
         Math.floor(Math.random()*6)+1;
+
 
 
         await interaction.editReply(
             `🎲 주사위 결과: **${dice}**`
         );
 
+
     }
+
+
 
 
 
@@ -308,32 +306,44 @@ client.on("interactionCreate", async interaction=>{
         interaction.options.getString("선택");
 
 
-        const list=[
+
+        const list = [
             "가위",
             "바위",
             "보"
         ];
 
 
+
         const bot =
         list[Math.floor(Math.random()*3)];
+
 
 
         let result;
 
 
-        if(user===bot)
+
+        if(user===bot){
+
             result="🤝 무승부!";
 
+        }
         else if(
             (user==="가위"&&bot==="보") ||
             (user==="바위"&&bot==="가위") ||
             (user==="보"&&bot==="바위")
-        )
+        ){
+
             result="🎉 승리!";
 
-        else
+        }
+        else{
+
             result="😢 패배!";
+
+        }
+
 
 
         await interaction.editReply(
@@ -345,7 +355,10 @@ client.on("interactionCreate", async interaction=>{
 ${result}`
         );
 
+
     }
+
+
 
 
 
@@ -354,47 +367,53 @@ ${result}`
     if(interaction.commandName==="채팅정보"){
 
 
+        const db = database.getDB();
+
+
         const id =
         interaction.user.id;
 
 
-        db.get(
+
+        const row = await db.get(
             "SELECT * FROM levels WHERE id=?",
-            [id],
-            async(err,row)=>{
+            [id]
+        );
 
 
-                if(!row){
 
-                    await interaction.editReply(
-                        "📭 아직 채팅 기록이 없습니다."
-                    );
-
-                    return;
-
-                }
+        if(!row){
 
 
-                const next =
-                100-(row.count%100);
+            await interaction.editReply(
+                "📭 아직 채팅 기록이 없습니다."
+            );
 
 
-                await interaction.editReply(
+            return;
 
+        }
+
+
+
+        const next =
+        100 - (row.count % 100);
+
+
+
+        await interaction.editReply(
 `📊 ${interaction.user.username}님의 정보
 
 ⭐ 레벨: **${row.level}**
 💬 채팅 수: **${row.count}개**
 ⬆️ 다음 레벨까지: **${next}개**`
-
-                );
-
-
-            }
         );
 
 
     }
+
+
+
 
 
 
@@ -403,108 +422,130 @@ ${result}`
     if(interaction.commandName==="채팅랭킹"){
 
 
-        db.all(
-            "SELECT * FROM levels ORDER BY count DESC LIMIT 10",
-            [],
-            async(err,ranking)=>{
+        const db = database.getDB();
 
 
-                let text =
-                "🏆 채팅 랭킹 TOP 10\n\n";
+
+        const ranking = await db.all(
+            "SELECT * FROM levels ORDER BY count DESC LIMIT 10"
+        );
 
 
-                ranking.forEach((user,index)=>{
 
-                    text +=
+        let text =
+        "🏆 채팅 랭킹 TOP 10\n\n";
+
+
+
+        ranking.forEach((user,index)=>{
+
+
+            text +=
 `${index+1}위. **${user.name}**
+
 💬 채팅 수: **${user.count}개**
 ⭐ 레벨: **${user.level}**
 
 `;
 
-                });
+
+        });
 
 
-                if(ranking.length===0){
 
-                    text =
-                    "📭 아직 기록된 채팅이 없습니다.";
+        if(ranking.length===0){
 
-                }
+            text =
+            "📭 아직 기록된 채팅이 없습니다.";
 
-
-                await interaction.editReply(text);
+        }
 
 
-            }
+
+        await interaction.editReply(text);
+
+
+    }
+
+    // 청소
+
+if(interaction.commandName==="청소"){
+
+
+    if(!interaction.member.permissions.has(
+        PermissionFlagsBits.ManageMessages
+    )){
+
+
+        await interaction.editReply(
+            "🚫 메시지 관리 권한이 필요합니다."
+        );
+
+
+        return;
+
+    }
+
+
+
+    const amount =
+    interaction.options.getInteger("개수");
+
+
+
+    if(amount < 1 || amount > 100){
+
+
+        await interaction.editReply(
+            "❌ 1~100 사이 숫자만 가능합니다."
+        );
+
+
+        return;
+
+    }
+
+
+
+
+    try{
+
+
+        const deleted =
+        await interaction.channel.bulkDelete(
+            amount,
+            true
+        );
+
+
+
+        await interaction.editReply(
+            `🧹 ${deleted.size}개의 메시지를 삭제했습니다.`
+        );
+
+
+
+    }catch(error){
+
+
+        console.error(error);
+
+
+
+        await interaction.editReply(
+            "❌ 메시지 삭제 실패"
         );
 
 
     }
 
 
-
-    // 청소
-
-    if(interaction.commandName==="청소"){
-
-
-        if(!interaction.member.permissions.has(
-            PermissionFlagsBits.ManageMessages
-        )){
-
-            await interaction.editReply(
-                "🚫 메시지 관리 권한이 필요합니다."
-            );
-
-            return;
-
-        }
-
-
-        const amount =
-        interaction.options.getInteger("개수");
-
-
-        if(amount < 1 || amount > 100){
-
-            await interaction.editReply(
-                "❌ 1~100 사이 숫자만 가능합니다."
-            );
-
-            return;
-
-        }
-
-
-        try{
-
-            const deleted =
-            await interaction.channel.bulkDelete(
-                amount,
-                true
-            );
-
-
-            await interaction.editReply(
-                `🧹 ${deleted.size}개의 메시지를 삭제했습니다.`
-            );
-
-
-        }catch(error){
-
-            console.error(error);
-
-            await interaction.editReply(
-                "❌ 메시지 삭제 실패"
-            );
-
-        }
-
-    }
+}
 
 
 });
+
+
 
 
 
@@ -512,31 +553,41 @@ ${result}`
 
 const http = require("http");
 
+
 const PORT =
 process.env.PORT || 3000;
 
 
+
 http.createServer((req,res)=>{
+
 
     res.writeHead(200,{
         "Content-Type":"text/plain"
     });
+
+
 
     res.end(
         "Discord Bot is running!"
     );
 
 
+
 }).listen(PORT,()=>{
+
 
     console.log(
         `웹 서버 실행 중: ${PORT}`
     );
 
+
 });
 
 
 
-// 실행
+
+
+// 봇 실행
 
 client.login(TOKEN);
