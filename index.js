@@ -1,6 +1,14 @@
 const database = require("./database");
 require("dotenv").config();
 
+process.on("uncaughtException", err => {
+    console.log("오류 발생:", err);
+});
+
+process.on("unhandledRejection", err => {
+    console.log("Promise 오류:", err);
+});
+
 const {
     Client,
     GatewayIntentBits,
