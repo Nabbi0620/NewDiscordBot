@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const {
     Client,
     GatewayIntentBits,
@@ -504,7 +506,19 @@ client.on("interactionCreate", async interaction=>{
 
 });
 
+const http = require("http");
 
+const PORT = process.env.PORT || 3000;
+
+http.createServer((req, res) => {
+    res.writeHead(200, {
+        "Content-Type": "text/plain"
+    });
+
+    res.end("Discord Bot is running!");
+}).listen(PORT, () => {
+    console.log(`웹 서버 실행 중: ${PORT}`);
+});
 
 // 봇 실행
 
