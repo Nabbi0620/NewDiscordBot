@@ -406,47 +406,53 @@ if(interaction.commandName==="청소"){
     if(!interaction.member.permissions.has(
         PermissionFlagsBits.ManageMessages
     )){
-
         return interaction.reply({
             content:"❌ 메시지 관리 권한이 필요합니다.",
+            ephemeral:true
+        });
+    }
+
+
+    const amount = interaction.options.getInteger("개수");
+
+
+    if(amount < 1 || amount > 100){
+
+        return interaction.reply({
+            content:"❌ 1~100 사이 숫자만 가능합니다.",
             ephemeral:true
         });
 
     }
 
 
-    const amount =
-    interaction.options.getInteger("개수");
+    await interaction.deferReply({
+        ephemeral:true
+    });
 
 
     try{
 
+        const deleted =
         await interaction.channel.bulkDelete(
             amount,
             true
         );
 
 
-        await interaction.reply({
-
-            content:`🧹 ${amount}개의 메시지를 삭제했습니다.`,
-            ephemeral:true
-
-        });
+        await interaction.editReply(
+            `🧹 ${deleted.size}개의 메시지를 삭제했습니다.`
+        );
 
 
     }catch(error){
 
-        console.error(error);
+        console.error("청소 오류:", error);
 
 
-        await interaction.reply({
-
-            content:
-            "❌ 봇에게 메시지 삭제 권한이 없습니다.",
-            ephemeral:true
-
-        });
+        await interaction.editReply(
+            "❌ 메시지를 삭제하지 못했습니다."
+        );
 
     }
 
