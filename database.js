@@ -1,39 +1,67 @@
 const fs = require("fs");
 
-const file = "./levels.json";
+const FILE = "./levels.json";
 
-if(!fs.existsSync(file)){
-    fs.writeFileSync(file, "{}");
+
+if(!fs.existsSync(FILE)){
+    fs.writeFileSync(FILE, "{}");
 }
 
-let levels = JSON.parse(
-    fs.readFileSync(file, "utf8")
-);
+
+function load(){
+
+    try{
+
+        return JSON.parse(
+            fs.readFileSync(FILE, "utf8")
+        );
+
+    }catch{
+
+        return {};
+
+    }
+
+}
 
 
-function save(){
+function save(data){
+
     fs.writeFileSync(
-        file,
-        JSON.stringify(levels,null,2)
+        FILE,
+        JSON.stringify(data,null,2)
     );
+
 }
 
 
 module.exports = {
 
+
     get(id){
-        return levels[id];
+
+        const data = load();
+
+        return data[id];
+
     },
 
 
-    set(id,data){
-        levels[id]=data;
-        save();
+    set(id,user){
+
+        const data = load();
+
+        data[id] = user;
+
+        save(data);
+
     },
 
 
-    all(){
-        return Object.values(levels);
+    getAll(){
+
+        return load();
+
     }
 
 };
