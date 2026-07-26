@@ -210,11 +210,11 @@ client.on("messageCreate", message=>{
     if(levels[id].level > oldLevel){
 
         message.channel.send(
-`╔══════════════════════╗
+`╔══════════                ═══════╗
 🎉 레벨 업!
 👤 ${message.author.username}
 ⭐ Lv.${levels[id].level}
-╚══════════════════════╝`
+╚═════════════════╝`
         );
 
     }
