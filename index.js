@@ -93,7 +93,29 @@ const commands = [
 
     new SlashCommandBuilder()
         .setName("레벨랭킹")
-        .setDescription("레벨 랭킹을 확인합니다.")
+        .setDescription("레벨 랭킹을 확인합니다."),
+
+
+    new SlashCommandBuilder()
+        .setName("핑")
+        .setDescription("봇 핑 확인"),
+
+
+    new SlashCommandBuilder()
+        .setName("상태")
+        .setDescription("봇 상태 확인"),
+
+
+    new SlashCommandBuilder()
+        .setName("청소")
+        .setDescription("메시지를 삭제합니다.")
+        .addIntegerOption(option =>
+            option
+            .setName("개수")
+            .setDescription("삭제할 메시지 개수 (1~100)")
+            .setRequired(true)
+        )
+
 
 ].map(command => command.toJSON());
 
@@ -390,6 +412,67 @@ client.on("interactionCreate", async interaction=>{
 
 });
 
+    // 핑
+    if(interaction.commandName==="핑"){
+
+        await interaction.reply(
+            `🏓 퐁!\n`+
+            `📡 봇 핑: ${client.ws.ping}ms`
+        );
+
+    }
+
+
+
+    // 상태
+    if(interaction.commandName==="상태"){
+
+        await interaction.reply(
+            `✅ 봇 상태: 온라인\n`+
+            `🤖 이름: ${client.user.tag}\n`+
+            `📡 서버 핑: ${client.ws.ping}ms`
+        );
+
+    }
+
+
+
+    // 청소
+    if(interaction.commandName==="청소"){
+
+        const amount =
+            interaction.options.getInteger("개수");
+
+
+        if(amount < 1 || amount > 100){
+
+            return interaction.reply({
+                content:"❌ 1~100개만 삭제 가능합니다.",
+                ephemeral:true
+            });
+
+        }
+
+
+        const messages =
+            await interaction.channel.messages.fetch({
+                limit: amount
+            });
+
+
+        await interaction.channel.bulkDelete(
+            messages,
+            true
+        );
+
+
+        await interaction.reply({
+            content:
+            `🧹 ${amount}개의 메시지를 삭제했습니다.`,
+            ephemeral:true
+        });
+
+    }
 
 
 client.login(TOKEN);
