@@ -461,7 +461,12 @@ if(interaction.commandName==="청소"){
 
 });
 
+const http = require("http");
 
+http.createServer((req, res) => {
+    res.writeHead(200);
+    res.end("Bot is running!");
+}).listen(process.env.PORT || 3000);
 
 // 봇 실행
 
