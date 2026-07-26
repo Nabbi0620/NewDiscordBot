@@ -3,14 +3,13 @@ const {
     GatewayIntentBits,
     REST,
     Routes,
-    SlashCommandBuilder
+    SlashCommandBuilder,
+    PermissionFlagsBits
 } = require("discord.js");
 
 const fs = require("fs");
 
-
 const TOKEN = process.env.DISCORD_TOKEN;
-
 const CLIENT_ID = "1530511828025872394";
 const GUILD_ID = "1451481873229283500";
 
@@ -26,7 +25,6 @@ if(fs.existsSync(LEVEL_FILE)){
     );
 }
 
-
 function saveLevels(){
     fs.writeFileSync(
         LEVEL_FILE,
@@ -35,103 +33,90 @@ function saveLevels(){
 }
 
 
-
-// 봇
+// 봇 생성
 const client = new Client({
 
     intents:[
-
         GatewayIntentBits.Guilds,
-
         GatewayIntentBits.GuildMessages,
-
         GatewayIntentBits.MessageContent
-
     ]
 
 });
 
 
 
-// 명령어
+// 명령어 목록
 const commands = [
 
-
-new SlashCommandBuilder()
-.setName("dm")
-.setDescription("DM 보내기")
-.addUserOption(o=>
-    o.setName("유저")
-    .setDescription("보낼 사람")
-    .setRequired(true)
-)
-.addStringOption(o=>
-    o.setName("내용")
-    .setDescription("내용")
-    .setRequired(true)
-),
+    new SlashCommandBuilder()
+    .setName("핑")
+    .setDescription("봇 상태 확인"),
 
 
-
-new SlashCommandBuilder()
-.setName("주사위")
-.setDescription("주사위 굴리기"),
-
-
-
-new SlashCommandBuilder()
-.setName("가위바위보")
-.setDescription("게임")
-.addStringOption(o=>
-    o.setName("선택")
-    .setDescription("선택")
-    .setRequired(true)
-    .addChoices(
-        {name:"가위",value:"가위"},
-        {name:"바위",value:"바위"},
-        {name:"보",value:"보"}
+    new SlashCommandBuilder()
+    .setName("dm")
+    .setDescription("유저에게 DM 보내기")
+    .addUserOption(option =>
+        option
+        .setName("유저")
+        .setDescription("보낼 유저")
+        .setRequired(true)
     )
-),
+    .addStringOption(option =>
+        option
+        .setName("내용")
+        .setDescription("내용")
+        .setRequired(true)
+    ),
 
 
-
-new SlashCommandBuilder()
-.setName("레벨정보")
-.setDescription("레벨 확인"),
-
+    new SlashCommandBuilder()
+    .setName("주사위")
+    .setDescription("주사위 굴리기"),
 
 
-new SlashCommandBuilder()
-.setName("레벨랭킹")
-.setDescription("랭킹 확인"),
+    new SlashCommandBuilder()
+    .setName("가위바위보")
+    .setDescription("봇과 가위바위보")
+    .addStringOption(option =>
+        option
+        .setName("선택")
+        .setDescription("가위 바위 보")
+        .setRequired(true)
+        .addChoices(
+            {
+                name:"✌️ 가위",
+                value:"가위"
+            },
+            {
+                name:"✊ 바위",
+                value:"바위"
+            },
+            {
+                name:"🖐️ 보",
+                value:"보"
+            }
+        )
+    ),
 
 
-
-new SlashCommandBuilder()
-.setName("핑")
-.setDescription("봇 핑 확인"),
-
+    new SlashCommandBuilder()
+    .setName("채팅정보")
+    .setDescription("내 레벨 확인"),
 
 
-new SlashCommandBuilder()
-.setName("상태")
-.setDescription("봇 상태 확인"),
+    new SlashCommandBuilder()
+    .setName("청소")
+    .setDescription("메시지 삭제")
+    .addIntegerOption(option =>
+        option
+        .setName("개수")
+        .setDescription("삭제할 메시지 개수")
+        .setRequired(true)
+    )
 
-
-
-new SlashCommandBuilder()
-.setName("청소")
-.setDescription("메시지 삭제")
-.addIntegerOption(o=>
-    o.setName("개수")
-    .setDescription("삭제할 개수")
-    .setRequired(true)
-)
-
-
-].map(x=>x.toJSON());
-
-
+].map(command=>command.toJSON());
 
 
 
@@ -142,43 +127,35 @@ const rest = new REST({
 }).setToken(TOKEN);
 
 
-
 (async()=>{
 
-try{
+    try{
 
-console.log("명령어 등록 중...");
+        console.log("명령어 등록 중...");
+
+        await rest.put(
+
+            Routes.applicationGuildCommands(
+                CLIENT_ID,
+                GUILD_ID
+            ),
+
+            {
+                body:commands
+            }
+
+        );
 
 
-await rest.put(
+        console.log("명령어 등록 완료!");
 
-Routes.applicationGuildCommands(
-CLIENT_ID,
-GUILD_ID
-),
+    }catch(err){
 
-{
-body:commands
-}
+        console.log(err);
 
-);
-
-
-console.log("명령어 등록 완료!");
-
-}
-
-catch(err){
-
-console.log(err);
-
-}
-
+    }
 
 })();
-
-
-
 
 
 
@@ -186,397 +163,310 @@ console.log(err);
 
 client.once("ready",()=>{
 
-console.log(
-`${client.user.tag} 로그인 완료!`
-);
+    console.log(
+        `${client.user.tag} 로그인 완료!`
+    );
 
 });
 
 
 
+// 채팅 레벨
+
+client.on("messageCreate", message=>{
 
 
-
-// 레벨 시스템
-
-client.on("messageCreate",message=>{
+    if(message.author.bot)
+        return;
 
 
-if(message.author.bot)
-return;
+    let id = message.author.id;
 
 
-let id = message.author.id;
+    if(!levels[id]){
+
+        levels[id] = {
+
+            name:message.author.username,
+            count:0,
+            level:0
+
+        };
+
+    }
 
 
+    levels[id].count++;
 
-if(!levels[id]){
-
-levels[id]={
-
-name:message.author.username,
-
-count:0,
-
-level:0
-
-};
-
-}
+    levels[id].level =
+        Math.floor(
+            levels[id].count / 100
+        );
 
 
-
-levels[id].count++;
-
-
-levels[id].level =
-Math.floor(
-levels[id].count/100
-);
+    levels[id].name =
+        message.author.username;
 
 
-
-levels[id].name =
-message.author.username;
-
-
-
-saveLevels();
+    saveLevels();
 
 
 });
-
-
-
-
-
-
 
 // 명령어 처리
 
-client.on(
-"interactionCreate",
-async interaction=>{
+client.on("interactionCreate", async interaction=>{
 
+    if(!interaction.isChatInputCommand())
+        return;
 
-if(!interaction.isChatInputCommand())
-return;
 
+    // 핑
 
+    if(interaction.commandName==="핑"){
 
-// DM
+        await interaction.reply({
 
-if(interaction.commandName==="dm"){
+            content:
+            `🏓 퐁!\n`+
+            `🤖 봇 상태: 정상 작동\n`+
+            `📡 서버 핑: ${client.ws.ping}ms`
 
+        });
 
-let user =
-interaction.options.getUser("유저");
+    }
 
 
-let text =
-interaction.options.getString("내용");
 
+    // DM
 
-try{
+    if(interaction.commandName==="dm"){
 
-await user.send(text);
+        await interaction.deferReply({
+            ephemeral:true
+        });
 
 
-await interaction.reply({
+        const user =
+        interaction.options.getUser("유저");
 
-content:"✅ DM 전송 완료",
 
-ephemeral:true
+        const content =
+        interaction.options.getString("내용");
 
-});
 
+        try{
 
-}
+            await user.send(content);
 
-catch{
 
-await interaction.reply({
+            await interaction.editReply(
+                "✅ DM 전송 완료!"
+            );
 
-content:"❌ DM 실패",
 
-ephemeral:true
+        }catch(error){
 
-});
+            await interaction.editReply(
+                "❌ DM 전송 실패"
+            );
 
-}
+        }
 
+    }
 
-}
 
 
+    // 주사위
 
+    if(interaction.commandName==="주사위"){
 
+        const num =
+        Math.floor(Math.random()*6)+1;
 
 
+        await interaction.reply(
+            `🎲 결과: **${num}**`
+        );
 
-// 주사위
+    }
 
-if(interaction.commandName==="주사위"){
 
 
-let dice =
-Math.floor(Math.random()*6)+1;
+    // 가위바위보
 
+    if(interaction.commandName==="가위바위보"){
 
-await interaction.reply(
-`🎲 결과 : ${dice}`
-);
 
+        const user =
+        interaction.options.getString("선택");
 
-}
 
+        const list=[
+            "가위",
+            "바위",
+            "보"
+        ];
 
 
+        const bot =
+        list[Math.floor(Math.random()*3)];
 
 
+        let result;
 
 
-// 가위바위보
+        if(user===bot){
 
-if(interaction.commandName==="가위바위보"){
+            result="🤝 무승부!";
 
+        }
+        else if(
 
-let user =
-interaction.options.getString("선택");
+            (user==="가위"&&bot==="보") ||
+            (user==="바위"&&bot==="가위") ||
+            (user==="보"&&bot==="바위")
 
+        ){
 
-let list=[
-"가위",
-"바위",
-"보"
-];
+            result="🎉 승리!";
 
+        }
+        else{
 
-let bot =
-list[Math.floor(Math.random()*3)];
+            result="😢 패배!";
 
+        }
 
-let result;
 
+        await interaction.reply(
 
-if(user===bot)
+            `🎮 가위바위보\n\n`+
+            `👤 너: ${user}\n`+
+            `🤖 봇: ${bot}\n\n`+
+            result
 
-result="🤝 무승부";
+        );
 
+    }
 
-else if(
 
-(user==="가위"&&bot==="보")||
 
-(user==="바위"&&bot==="가위")||
 
-(user==="보"&&bot==="바위")
+    // 채팅 정보
 
-)
+    if(interaction.commandName==="채팅정보"){
 
-result="🎉 승리";
 
+        const id =
+        interaction.user.id;
 
-else
 
-result="😢 패배";
+        if(!levels[id]){
 
+            levels[id]={
+                name:interaction.user.username,
+                count:0,
+                level:0
+            };
 
+            saveLevels();
 
-await interaction.reply(
+        }
 
-`👤 ${user}\n🤖 ${bot}\n\n${result}`
 
-);
+        const data =
+        levels[id];
 
 
-}
+        const next =
+        100-(data.count%100);
 
 
 
+        await interaction.reply(
 
+            `📊 ${interaction.user.username}님의 정보\n\n`+
+            `⭐ 레벨: **${data.level}**\n`+
+            `💬 채팅 수: **${data.count}개**\n`+
+            `⬆️ 다음 레벨까지: **${next}개**`
 
+        );
 
+    }
 
-// 레벨정보
 
-if(interaction.commandName==="레벨정보"){
 
 
-let id =
-interaction.user.id;
 
+    // 청소 (관리자만)
 
+    if(interaction.commandName==="청소"){
 
-if(!levels[id]){
 
-levels[id]={
-name:interaction.user.username,
-count:0,
-level:0
-};
+        if(
+            !interaction.member.permissions.has(
+                PermissionFlagsBits.ManageMessages
+            )
+        ){
 
-}
+            await interaction.reply({
 
+                content:
+                "❌ 메시지 관리 권한이 필요합니다.",
+                ephemeral:true
 
-let data=levels[id];
+            });
 
+            return;
 
-await interaction.reply(
+        }
 
-`⭐ 레벨 : ${data.level}\n`+
-`💬 채팅 : ${data.count}개\n`+
-`⬆️ 다음 레벨 : ${100-(data.count%100)}개`
 
-);
 
+        const amount =
+        interaction.options.getInteger("개수");
 
-}
 
 
+        if(amount < 1 || amount > 100){
 
+            await interaction.reply({
 
+                content:
+                "❌ 1~100 사이 숫자만 가능합니다.",
+                ephemeral:true
 
+            });
 
+            return;
 
+        }
 
-// 랭킹
 
-if(interaction.commandName==="레벨랭킹"){
 
+        await interaction.channel.bulkDelete(
+            amount,
+            true
+        );
 
-let rank =
-Object.values(levels)
-.sort(
-(a,b)=>
-b.level-a.level ||
-b.count-a.count
-)
-.slice(0,10);
 
+        await interaction.reply({
 
+            content:
+            `🧹 ${amount}개의 메시지를 삭제했습니다.`,
+            ephemeral:true
 
-let msg="🏆 랭킹\n\n";
+        });
 
 
-rank.forEach((u,i)=>{
+    }
 
-msg+=
-`${i+1}위 ${u.name} Lv.${u.level} (${u.count})\n`;
-
-});
-
-
-await interaction.reply(msg);
-
-
-}
-
-
-
-
-
-
-
-// 핑
-
-if(interaction.commandName==="핑"){
-
-
-await interaction.reply(
-
-`🏓 퐁!\n📡 ${client.ws.ping}ms`
-
-);
-
-
-}
-
-
-
-
-
-
-
-// 상태
-
-if(interaction.commandName==="상태"){
-
-
-await interaction.reply(
-
-`✅ 온라인\n🤖 ${client.user.tag}\n📡 ${client.ws.ping}ms`
-
-);
-
-
-}
-
-
-
-
-
-
-
-// 청소
-
-if(interaction.commandName==="청소"){
-
-
-let amount =
-interaction.options.getInteger("개수");
-
-
-
-if(amount<1 || amount>100){
-
-return interaction.reply({
-
-content:"1~100만 가능",
-
-ephemeral:true
-
-});
-
-}
-
-
-
-let messages =
-await interaction.channel.messages.fetch({
-
-limit:amount
 
 });
 
 
 
-await interaction.channel.bulkDelete(
-messages,
-true
-);
-
-
-
-await interaction.reply({
-
-content:`🧹 ${amount}개 삭제 완료`,
-
-ephemeral:true
-
-});
-
-
-}
-
-
-
-}
-
-);
-
-
-
-
+// 봇 실행
 
 client.login(TOKEN);
