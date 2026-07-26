@@ -196,19 +196,25 @@ client.on("messageCreate", message=>{
     }
 
 
-    levels[id].count++;
+   levels[id].count++;
 
-    levels[id].level =
-        Math.floor(
-            levels[id].count / 100
-        );
+const oldLevel = levels[id].level;
 
+levels[id].level = Math.floor(levels[id].count / 100);
 
-    levels[id].name =
-        message.author.username;
+levels[id].name = message.author.username;
 
+if (levels[id].level > oldLevel) {
+    message.channel.send(
+`╔════════════╗
+🎉 레벨 업!
+👤 ${message.author.username}
+⭐ Lv.${levels[id].level}
+╚════════════╝`
+    );
+}
 
-    saveLevels();
+saveLevels();
 
 
 });
