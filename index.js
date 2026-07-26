@@ -1,3 +1,4 @@
+const db = require("./database");
 require("dotenv").config();
 
 const {
@@ -9,33 +10,12 @@ const {
     PermissionFlagsBits
 } = require("discord.js");
 
-const fs = require("fs");
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = "1530511828025872394";
 const GUILD_ID = "1451481873229283500";
 
 
-// 레벨 저장
-const LEVEL_FILE = "./levels.json";
-
-let levels = {};
-
-if(fs.existsSync(LEVEL_FILE)){
-    levels = JSON.parse(
-        fs.readFileSync(LEVEL_FILE)
-    );
-}
-
-function saveLevels(){
-    fs.writeFileSync(
-        LEVEL_FILE,
-        JSON.stringify(levels,null,2)
-    );
-}
-
-
-// 봇 생성
 const client = new Client({
 
     intents:[
@@ -48,6 +28,7 @@ const client = new Client({
 
 
 // 명령어
+
 const commands = [
 
     new SlashCommandBuilder()
@@ -125,6 +106,7 @@ const commands = [
 ].map(command=>command.toJSON());
 
 
+
 // 명령어 등록
 
 const rest = new REST({
@@ -159,6 +141,7 @@ const rest = new REST({
 })();
 
 
+
 // 로그인
 
 client.once("ready",()=>{
@@ -170,57 +153,76 @@ client.once("ready",()=>{
 });
 
 
+
 // 채팅 레벨 시스템
 
 client.on("messageCreate", message=>{
 
-    if(message.author.bot)
-        return;
+    if(message.author.bot) return;
 
 
     const id = message.author.id;
+    const name = message.author.username;
 
 
-    if(!levels[id]){
-
-        levels[id]={
-            name:message.author.username,
-            count:0,
-            level:0
-        };
-
-    }
+    db.get(
+        "SELECT * FROM levels WHERE id=?",
+        [id],
+        (err,row)=>{
 
 
-    levels[id].count++;
+            if(!row){
+
+                db.run(
+                    "INSERT INTO levels VALUES (?,?,?,?)",
+                    [
+                        id,
+                        name,
+                        1,
+                        0
+                    ]
+                );
+
+            }
+
+            else{
 
 
-    const oldLevel =
-    levels[id].level;
+                const count = row.count + 1;
+                const level = Math.floor(count / 100);
 
 
-    levels[id].level =
-    Math.floor(levels[id].count / 100);
+                db.run(
+                    `
+                    UPDATE levels
+                    SET name=?, count=?, level=?
+                    WHERE id=?
+                    `,
+                    [
+                        name,
+                        count,
+                        level,
+                        id
+                    ]
+                );
 
 
-    levels[id].name =
-    message.author.username;
+                if(level > row.level){
 
-
-    if(levels[id].level > oldLevel){
-
-        message.channel.send(
+                    message.channel.send(
 `╔═════════════════╗
 🎉 레벨 업!
-👤 ${message.author.username}
-⭐ Lv.${levels[id].level}
+👤 ${name}
+⭐ Lv.${level}
 ╚═════════════════╝`
-        );
+                    );
 
-    }
+                }
 
+            }
 
-    saveLevels();
+        }
+    );
 
 });
 
@@ -257,7 +259,6 @@ client.on("interactionCreate", async interaction=>{
         const user =
         interaction.options.getUser("유저");
 
-
         const content =
         interaction.options.getString("내용");
 
@@ -266,13 +267,11 @@ client.on("interactionCreate", async interaction=>{
 
             await user.send(content);
 
-
             await interaction.editReply(
                 "✅ DM 전송 완료!"
             );
 
-
-        }catch(error){
+        }catch{
 
             await interaction.editReply(
                 "❌ DM 전송 실패"
@@ -323,34 +322,27 @@ client.on("interactionCreate", async interaction=>{
         let result;
 
 
-        if(user===bot){
-
+        if(user===bot)
             result="🤝 무승부!";
 
-        }
         else if(
             (user==="가위"&&bot==="보") ||
             (user==="바위"&&bot==="가위") ||
             (user==="보"&&bot==="바위")
-        ){
-
+        )
             result="🎉 승리!";
 
-        }
-        else{
-
+        else
             result="😢 패배!";
-
-        }
 
 
         await interaction.editReply(
+`🎮 가위바위보
 
-            `🎮 가위바위보\n\n`+
-            `👤 너: ${user}\n`+
-            `🤖 봇: ${bot}\n\n`+
-            result
+👤 너: ${user}
+🤖 봇: ${bot}
 
+${result}`
         );
 
     }
@@ -366,36 +358,41 @@ client.on("interactionCreate", async interaction=>{
         interaction.user.id;
 
 
-        if(!levels[id]){
-
-            levels[id]={
-                name:interaction.user.username,
-                count:0,
-                level:0
-            };
-
-            saveLevels();
-
-        }
+        db.get(
+            "SELECT * FROM levels WHERE id=?",
+            [id],
+            async(err,row)=>{
 
 
-        const data =
-        levels[id];
+                if(!row){
+
+                    await interaction.editReply(
+                        "📭 아직 채팅 기록이 없습니다."
+                    );
+
+                    return;
+
+                }
 
 
-        const next =
-        100-(data.count%100);
+                const next =
+                100-(row.count%100);
 
 
+                await interaction.editReply(
 
-        await interaction.editReply(
+`📊 ${interaction.user.username}님의 정보
 
-            `📊 ${interaction.user.username}님의 정보\n\n`+
-            `⭐ 레벨: **${data.level}**\n`+
-            `💬 채팅 수: **${data.count}개**\n`+
-            `⬆️ 다음 레벨까지: **${next}개**`
+⭐ 레벨: **${row.level}**
+💬 채팅 수: **${row.count}개**
+⬆️ 다음 레벨까지: **${next}개**`
 
+                );
+
+
+            }
         );
+
 
     }
 
@@ -406,42 +403,48 @@ client.on("interactionCreate", async interaction=>{
     if(interaction.commandName==="채팅랭킹"){
 
 
-        const ranking =
-        Object.values(levels)
-        .sort(
-            (a,b)=>b.count-a.count
-        )
-        .slice(0,10);
+        db.all(
+            "SELECT * FROM levels ORDER BY count DESC LIMIT 10",
+            [],
+            async(err,ranking)=>{
 
 
-        let text =
-        "🏆 채팅 랭킹 TOP 10\n\n";
+                let text =
+                "🏆 채팅 랭킹 TOP 10\n\n";
 
 
-        ranking.forEach((user,index)=>{
+                ranking.forEach((user,index)=>{
 
-            text +=
-            `${index+1}위. **${user.name}**\n`+
-            `💬 채팅 수: **${user.count}개**\n`+
-            `⭐ 레벨: **${user.level}**\n\n`;
+                    text +=
+`${index+1}위. **${user.name}**
+💬 채팅 수: **${user.count}개**
+⭐ 레벨: **${user.level}**
 
-        });
+`;
 
-
-        if(ranking.length===0){
-
-            text="📭 아직 기록된 채팅이 없습니다.";
-
-        }
+                });
 
 
-        await interaction.editReply(text);
+                if(ranking.length===0){
+
+                    text =
+                    "📭 아직 기록된 채팅이 없습니다.";
+
+                }
+
+
+                await interaction.editReply(text);
+
+
+            }
+        );
+
 
     }
 
 
 
-    // 청소 (관리자만)
+    // 청소
 
     if(interaction.commandName==="청소"){
 
@@ -476,7 +479,6 @@ client.on("interactionCreate", async interaction=>{
 
         try{
 
-
             const deleted =
             await interaction.channel.bulkDelete(
                 amount,
@@ -491,12 +493,10 @@ client.on("interactionCreate", async interaction=>{
 
         }catch(error){
 
-
             console.error(error);
 
-
             await interaction.editReply(
-                "❌ 메시지를 삭제하지 못했습니다."
+                "❌ 메시지 삭제 실패"
             );
 
         }
@@ -506,20 +506,37 @@ client.on("interactionCreate", async interaction=>{
 
 });
 
+
+
+// Render용 웹 서버
+
 const http = require("http");
 
-const PORT = process.env.PORT || 3000;
+const PORT =
+process.env.PORT || 3000;
 
-http.createServer((req, res) => {
-    res.writeHead(200, {
-        "Content-Type": "text/plain"
+
+http.createServer((req,res)=>{
+
+    res.writeHead(200,{
+        "Content-Type":"text/plain"
     });
 
-    res.end("Discord Bot is running!");
-}).listen(PORT, () => {
-    console.log(`웹 서버 실행 중: ${PORT}`);
+    res.end(
+        "Discord Bot is running!"
+    );
+
+
+}).listen(PORT,()=>{
+
+    console.log(
+        `웹 서버 실행 중: ${PORT}`
+    );
+
 });
 
-// 봇 실행
+
+
+// 실행
 
 client.login(TOKEN);
