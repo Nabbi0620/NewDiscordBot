@@ -401,49 +401,25 @@ client.on("interactionCreate", async interaction=>{
 
     // 청소 (관리자만)
 
-    if(interaction.commandName==="청소"){
+if(interaction.commandName==="청소"){
+
+    if(!interaction.member.permissions.has(
+        PermissionFlagsBits.ManageMessages
+    )){
+
+        return interaction.reply({
+            content:"❌ 메시지 관리 권한이 필요합니다.",
+            ephemeral:true
+        });
+
+    }
 
 
-        if(
-            !interaction.member.permissions.has(
-                PermissionFlagsBits.ManageMessages
-            )
-        ){
-
-            await interaction.reply({
-
-                content:
-                "❌ 메시지 관리 권한이 필요합니다.",
-                ephemeral:true
-
-            });
-
-            return;
-
-        }
+    const amount =
+    interaction.options.getInteger("개수");
 
 
-
-        const amount =
-        interaction.options.getInteger("개수");
-
-
-
-        if(amount < 1 || amount > 100){
-
-            await interaction.reply({
-
-                content:
-                "❌ 1~100 사이 숫자만 가능합니다.",
-                ephemeral:true
-
-            });
-
-            return;
-
-        }
-
-
+    try{
 
         await interaction.channel.bulkDelete(
             amount,
@@ -453,14 +429,28 @@ client.on("interactionCreate", async interaction=>{
 
         await interaction.reply({
 
-            content:
-            `🧹 ${amount}개의 메시지를 삭제했습니다.`,
+            content:`🧹 ${amount}개의 메시지를 삭제했습니다.`,
             ephemeral:true
 
         });
 
 
+    }catch(error){
+
+        console.error(error);
+
+
+        await interaction.reply({
+
+            content:
+            "❌ 봇에게 메시지 삭제 권한이 없습니다.",
+            ephemeral:true
+
+        });
+
     }
+
+}
 
 
 });
