@@ -407,7 +407,7 @@ if(interaction.commandName==="청소"){
         PermissionFlagsBits.ManageMessages
     )){
         return interaction.reply({
-            content:"❌ 메시지 관리 권한이 필요합니다.",
+            content:"🚫 관리자만 사용할 수 있는 명령어입니다.",
             ephemeral:true
         });
     }
@@ -461,12 +461,7 @@ if(interaction.commandName==="청소"){
 
 });
 
-const http = require("http");
 
-http.createServer((req, res) => {
-    res.writeHead(200);
-    res.end("Bot is running!");
-}).listen(process.env.PORT || 3000);
 
 // 봇 실행
 
