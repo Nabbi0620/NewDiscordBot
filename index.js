@@ -211,7 +211,7 @@ console.error(error);
 // ===============================
 
 
-client.once("ready",()=>{
+client.once("clientReady", () => {
 
 
 console.log(
