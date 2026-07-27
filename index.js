@@ -1581,6 +1581,18 @@ client.on("ready", () => {
     console.log("🟢 하루봇 온라인:", client.user.tag);
 });
 
+client.on("shardResume", (id) => {
+    console.log(`🟢 Shard ${id} 재개`);
+});
+
+client.on("shardReady", (id) => {
+    console.log(`🟢 Shard ${id} 준비 완료`);
+});
+
+client.on("invalidated", () => {
+    console.log("❌ 세션이 무효화되었습니다.");
+});
+
 client.on("disconnect", () => {
     console.log("❌ Discord 연결 끊김");
 });
