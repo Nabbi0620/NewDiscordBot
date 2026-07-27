@@ -1,14 +1,6 @@
 const database = require("./database");
 require("dotenv").config();
 
-process.on("uncaughtException", err => {
-    console.error("치명적 오류:", err);
-});
-
-process.on("unhandledRejection", err => {
-    console.error("처리 안 된 Promise 오류:", err);
-});
-
 const {
     Client,
     GatewayIntentBits,
@@ -18,7 +10,26 @@ const {
     PermissionFlagsBits
 } = require("discord.js");
 
+// ===============================
+// 💙 하루봇 상태 체크
+// ===============================
 
+console.log("하루봇 코드 시작");
+
+
+process.on("uncaughtException", err => {
+    console.log("❌ 치명적 오류:", err);
+});
+
+
+process.on("unhandledRejection", err => {
+    console.log("❌ Promise 오류:", err);
+});
+
+
+setInterval(() => {
+    console.log("💙 하루봇 생존 확인", new Date().toLocaleString());
+}, 60000);
 
 const TOKEN = process.env.DISCORD_TOKEN;
 const CLIENT_ID = "1530511828025872394";
@@ -1576,3 +1587,19 @@ client.on("messageCreate", async message=>{
 
 
 client.login(TOKEN);
+
+client.on("disconnect", () => {
+    console.log("❌ Discord 연결 끊김");
+});
+
+client.on("reconnecting", () => {
+    console.log("🔄 Discord 재연결 중");
+});
+
+client.on("shardError", error => {
+    console.log("⚠️ Shard 오류:", error);
+});
+
+client.on("error", error => {
+    console.log("⚠️ Discord 오류:", error);
+});
