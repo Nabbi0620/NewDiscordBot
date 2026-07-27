@@ -2,11 +2,11 @@ const database = require("./database");
 require("dotenv").config();
 
 process.on("uncaughtException", err => {
-    console.log("오류 발생:", err);
+    console.error("치명적 오류:", err);
 });
 
 process.on("unhandledRejection", err => {
-    console.log("Promise 오류:", err);
+    console.error("처리 안 된 Promise 오류:", err);
 });
 
 const {
